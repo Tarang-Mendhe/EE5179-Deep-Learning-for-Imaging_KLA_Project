@@ -51,9 +51,10 @@ def main(input_dir, model_weights_path, denoised_output_dir, device, val_split='
 
     # Load the model
     try:
-
-        model = Unet() 
+        n_classes = 3  # Specify the number of classes for segmentation
+        model = UNet(n_class=n_classes)
         model.load_state_dict(torch.load(model_weights_path, map_location=device))
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         model.to(device)
         model.eval()
 
