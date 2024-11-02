@@ -8,6 +8,7 @@ from torchvision import transforms
 from PIL import Image
 from tqdm import tqdm
 import logging
+from best_model_arch import Unet  # Replace with your actual model class
 
 def load_image(image_path, device):
     img = Image.open(image_path).convert('RGB')
@@ -50,9 +51,12 @@ def main(input_dir, model_weights_path, denoised_output_dir, device, val_split='
 
     # Load the model
     try:
-        model = torch.load(model_weights_path, map_location=device)
+
+        model = Unet() 
+        model.load_state_dict(torch.load(model_weights_path, map_location=device))
         model.to(device)
         model.eval()
+
     except Exception as e:
         logging.error(f"Error loading model: {e}")
         return
