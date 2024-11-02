@@ -88,12 +88,12 @@ def main(input_dir, model_weights_path, denoised_output_dir, device, val_split='
         return
 
     os.makedirs(denoised_output_dir, exist_ok=True)
+    
+    # Create mask directory within the output directory
     mask_dir = os.path.join(denoised_output_dir, "mask")
     os.makedirs(mask_dir, exist_ok=True)
-    output_dir = qualitative_dir if qualitative_dir else denoised_output_dir
-    os.makedirs(output_dir, exist_ok=True)
 
-    results_file = os.path.join(output_dir, "metrics_results.txt")
+    results_file = os.path.join(denoised_output_dir, "metrics_results.txt")
     total_psnr = total_ssim = total_masked_psnr = total_masked_ssim = num_images = 0
     results = []
 
@@ -127,7 +127,7 @@ def main(input_dir, model_weights_path, denoised_output_dir, device, val_split='
                 with torch.no_grad():
                     denoised = model(img).clamp(0, 1)
 
-                output_path = get_unique_filename(output_dir, img_name)
+                output_path = get_unique_filename(denoised_output_dir, img_name)
                 save_output_image(denoised, output_path)
 
                 original_img = load_image(clean_img, device)
@@ -187,3 +187,4 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     main(args.input_dir, args.model_weights, args.denoised_output_dir, args.device, qualitative_dir=args.qualitative_dir)
+
