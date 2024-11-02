@@ -3,7 +3,8 @@ import argparse
 import torch
 import numpy as np
 #from torchmetrics.functional import peak_signal_noise_ratio as psnr
-from torchmetrics.image import peak_signal_noise_ratio as psnr
+#from torchmetrics.image import peak_signal_noise_ratio as psnr
+from torchmetrics.image import PeakSignalNoiseRatio as psnr
 from skimage.metrics import structural_similarity as ssim
 from torchvision import transforms
 from PIL import Image
