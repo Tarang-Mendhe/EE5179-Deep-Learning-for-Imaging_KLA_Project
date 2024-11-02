@@ -35,6 +35,18 @@ def save_output_image(output, output_path):
     output_img = (output_img * 255).astype(np.uint8)
     Image.fromarray(output_img).save(output_path)
 
+def get_unique_filename(output_dir, img_name):
+    base_name, ext = os.path.splitext(img_name)
+    output_path = os.path.join(output_dir, f"denoised_{img_name}")
+    counter = 1
+
+    # Check if file exists and increment suffix until a unique name is found
+    while os.path.exists(output_path):
+        output_path = os.path.join(output_dir, f"denoised_{base_name}_{counter}{ext}")
+        counter += 1
+
+    return output_path
+
 def calculate_psnr_ssim(original, denoised, mask=None):
     original = original.squeeze().cpu().numpy().transpose(1, 2, 0)
     denoised = denoised.squeeze().cpu().numpy().transpose(1, 2, 0)
@@ -114,8 +126,11 @@ def main(input_dir, model_weights_path, denoised_output_dir, device, val_split='
                 with torch.no_grad():
                     denoised = model(img).clamp(0, 1)
 
-                output_path = os.path.join(output_dir, f"denoised_{img_name}")
+                #output_path = os.path.join(output_dir, f"denoised_{img_name}")
+
+                output_path = get_unique_filename(output_dir, img_name)
                 save_output_image(denoised, output_path)
+                
 
                 original_img = load_image(clean_img, device)
                 if original_img is None:
