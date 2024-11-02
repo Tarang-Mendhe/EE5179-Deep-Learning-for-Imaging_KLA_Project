@@ -40,7 +40,8 @@ def calculate_psnr_ssim(original, denoised, mask=None):
     denoised = denoised.squeeze().cpu().numpy().transpose(1, 2, 0)
 
     if mask is not None:
-        mask = mask.squeeze().cpu().numpy()
+        mask = mask.squeeze().cpu().numpy()  # shape (256, 256)
+        mask = np.expand_dims(mask, axis=2)  # reshape to (256, 256, 1)
         original = original * mask
         denoised = denoised * mask
 
