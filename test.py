@@ -2,7 +2,8 @@ import os
 import argparse
 import torch
 import numpy as np
-from torchmetrics.functional import peak_signal_noise_ratio as psnr
+#from torchmetrics.functional import peak_signal_noise_ratio as psnr
+from torchmetrics.image import peak_signal_noise_ratio as psnr
 from skimage.metrics import structural_similarity as ssim
 from torchvision import transforms
 from PIL import Image
@@ -43,8 +44,17 @@ def calculate_psnr_ssim(original, denoised, mask=None):
         denoised = denoised * mask
 
     psnr_value = psnr(torch.tensor(denoised), torch.tensor(original), data_range=1.0).item()
-    ssim_value = ssim(original, denoised, multichannel=True, data_range=1.0)
+    ssim_value = ssim(original, denoised, multichannel=True, data_range=1.0,channel_axis=2)
     return psnr_value, ssim_value
+
+"""def calculate_psnr_ssim(original, denoised):
+    psnr_value = peak_signal_noise_ratio(original, denoised, data_range=1.0)
+    ssim_value = ssim(
+        original, denoised, win_size=3,  # Set win_size to 3, or another odd number <= 7
+        data_range=1.0, 
+        channel_axis=2  # Specify the color channel axis if using RGB images
+    )
+    return psnr_value, ssim_value"""
 
 def main(input_dir, model_weights_path, denoised_output_dir, device, val_split='Val', qualitative_dir=None):
     logging.basicConfig(level=logging.INFO)
