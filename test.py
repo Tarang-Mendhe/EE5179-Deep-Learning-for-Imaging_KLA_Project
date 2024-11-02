@@ -44,7 +44,8 @@ def calculate_psnr_ssim(original, denoised, mask=None):
         original = original * mask
         denoised = denoised * mask
 
-    psnr_value = psnr(torch.tensor(denoised), torch.tensor(original), data_range=1.0).item()
+    #psnr_value = psnr(torch.tensor(denoised), torch.tensor(original), data_range=1.0).item()
+    psnr_value = psnr(torch.tensor(denoised), torch.tensor(original))
     ssim_value = ssim(original, denoised, data_range=1.0,channel_axis=2)
     return psnr_value, ssim_value
 
