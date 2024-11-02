@@ -8,6 +8,7 @@ from torchvision import transforms
 from PIL import Image
 from tqdm import tqdm
 import logging
+import random
 import matplotlib.pyplot as plt
 from best_model_arch import UNet  # Replace with your actual model class
 
@@ -38,59 +39,33 @@ def get_unique_filename(output_dir, img_name):
     base_name, ext = os.path.splitext(img_name)
     output_path = os.path.join(output_dir, f"denoised_{img_name}")
     counter = 1
-
     while os.path.exists(output_path):
         output_path = os.path.join(output_dir, f"denoised_{base_name}_{counter}{ext}")
         counter += 1
-
     return output_path
 
 def calculate_psnr_ssim(original, denoised, mask=None):
     original = original.squeeze().cpu().numpy().transpose(1, 2, 0)
     denoised = denoised.squeeze().cpu().numpy().transpose(1, 2, 0)
-
     if mask is not None:
-        mask = mask.squeeze().cpu().numpy()
-        mask = np.expand_dims(mask, axis=2)
+        mask = mask.squeeze().cpu().numpy()  
+        mask = np.expand_dims(mask, axis=2)  
         original = original * mask
         denoised = denoised * mask
-
     psnr = PeakSignalNoiseRatio()
     psnr_value = psnr(torch.tensor(denoised), torch.tensor(original))
     ssim_value = ssim(original, denoised, data_range=1.0, channel_axis=2)
     return psnr_value, ssim_value
 
-def display_images(original, denoised, mask):
-    """Displays original, denoised, and masked images side by side."""
-    original_img = original.squeeze().cpu().numpy().transpose(1, 2, 0)
-    denoised_img = denoised.squeeze().cpu().numpy().transpose(1, 2, 0)
-    mask_img = mask.squeeze().cpu().numpy()
-
-    masked_original = original_img * np.expand_dims(mask_img, axis=2)
-    masked_denoised = denoised_img * np.expand_dims(mask_img, axis=2)
-
-    fig, axes = plt.subplots(1, 3, figsize=(12, 4))
-    axes[0].imshow(masked_original)
-    axes[0].set_title("Masked Original")
-    axes[1].imshow(masked_denoised)
-    axes[1].set_title("Masked Denoised")
-    axes[2].imshow(mask_img, cmap="gray")
-    axes[2].set_title("Defect Mask")
-    for ax in axes:
-        ax.axis("off")
-    plt.show()
-
 def main(input_dir, model_weights_path, denoised_output_dir, device, val_split='Val', qualitative_dir=None):
     logging.basicConfig(level=logging.INFO)
-
     try:
-        n_classes = 3
+        n_classes = 3  
         model = UNet(n_class=n_classes)
         model.load_state_dict(torch.load(model_weights_path, map_location=device))
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         model.to(device)
         model.eval()
-
     except Exception as e:
         logging.error(f"Error loading model: {e}")
         return
@@ -99,10 +74,7 @@ def main(input_dir, model_weights_path, denoised_output_dir, device, val_split='
     output_dir = qualitative_dir if qualitative_dir else denoised_output_dir
     os.makedirs(output_dir, exist_ok=True)
 
-    results_file = os.path.join(output_dir, "metrics_results.txt")
-    total_psnr = total_ssim = total_masked_psnr = total_masked_ssim = num_images = 0
-    results = []
-
+    images_to_display = []
     for category in os.listdir(input_dir):
         category_path = os.path.join(input_dir, category, val_split)
         if not os.path.isdir(category_path):
@@ -121,12 +93,10 @@ def main(input_dir, model_weights_path, denoised_output_dir, device, val_split='
             for img_name in os.listdir(clean_subfolder):
                 clean_img = os.path.join(clean_subfolder, img_name)
                 degraded_img = os.path.join(degraded_subfolder, img_name)
-                mask_img = os.path.join(mask_subfolder, f'{os.path.splitext(img_name)[0]}_mask.png')
+                img_base_name = os.path.splitext(img_name)[0]
+                mask_img = os.path.join(mask_subfolder, f'{img_base_name}_mask.png')
 
                 img = load_image(degraded_img, device)
-                if img is None:
-                    continue
-
                 with torch.no_grad():
                     denoised = model(img).clamp(0, 1)
 
@@ -134,28 +104,36 @@ def main(input_dir, model_weights_path, denoised_output_dir, device, val_split='
                 save_output_image(denoised, output_path)
 
                 original_img = load_image(clean_img, device)
-                if original_img is None:
-                    continue
-
                 mask = load_mask(mask_img, device)
-                display_images(original_img, denoised, mask)  # Display sample images
+                images_to_display.append((original_img, denoised, mask))
+                
+                if len(images_to_display) >= 5:
+                    break
+            if len(images_to_display) >= 5:
+                break
+        if len(images_to_display) >= 5:
+            break
 
-                psnr_value, ssim_value = calculate_psnr_ssim(original_img, denoised)
-                num_images += 1
+    fig, axes = plt.subplots(5, 3, figsize=(12, 20))
+    for i, (original_img, denoised_img, mask_img) in enumerate(images_to_display):
+        original_img = original_img.squeeze().cpu().numpy().transpose(1, 2, 0)
+        denoised_img = denoised_img.squeeze().cpu().numpy().transpose(1, 2, 0)
+        mask_img = mask_img.squeeze().cpu().numpy()
 
-                masked_psnr, masked_ssim = calculate_psnr_ssim(original_img, img, mask)
-                total_psnr += psnr_value
-                total_ssim += ssim_value
-                total_masked_psnr += masked_psnr
-                total_masked_ssim += masked_ssim
+        axes[i, 0].imshow(original_img)
+        axes[i, 0].set_title("Original Image")
+        axes[i, 0].axis('off')
 
-    if num_images > 0:
-        logging.info(f"Overall PSNR: {total_psnr / num_images:.4f}")
-        logging.info(f"Overall SSIM: {total_ssim / num_images:.4f}")
-        logging.info(f"Overall Masked PSNR: {total_masked_psnr / num_images:.4f}")
-        logging.info(f"Overall Masked SSIM: {total_masked_ssim / num_images:.4f}")
-    else:
-        logging.warning("No images were processed.")
+        axes[i, 1].imshow(denoised_img)
+        axes[i, 1].set_title("Denoised Image")
+        axes[i, 1].axis('off')
+
+        axes[i, 2].imshow(mask_img, cmap='gray')
+        axes[i, 2].set_title("Mask")
+        axes[i, 2].axis('off')
+
+    plt.tight_layout()
+    plt.show()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Test a deep learning model for image denoising with PSNR and SSIM evaluation in PyTorch.")
