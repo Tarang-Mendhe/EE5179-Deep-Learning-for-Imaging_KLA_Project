@@ -8,7 +8,7 @@ from torchvision import transforms
 from PIL import Image
 from tqdm import tqdm
 import logging
-from best_model_arch import Unet  # Replace with your actual model class
+from best_model_arch import UNet  # Replace with your actual model class
 
 def load_image(image_path, device):
     img = Image.open(image_path).convert('RGB')
