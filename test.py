@@ -146,7 +146,7 @@ def main(input_dir, model_weights_path, denoised_output_dir, device, val_split='
 
                 # Apply defect mask to both the original and degraded images
                 mask = load_mask(mask_img, device)
-                masked_psnr, masked_ssim = calculate_psnr_ssim(original_img, img, mask)
+                masked_psnr, masked_ssim = calculate_psnr_ssim(original_img, denoised, mask)
 
                 total_masked_psnr += masked_psnr
                 total_masked_ssim += masked_ssim
